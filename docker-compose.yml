@@ -1,0 +1,71 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: productsdb
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  mongodb:
+    image: mongo:7
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+
+  redis:
+    image: redis:alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+  product-service:
+    build: ./backend/product-service
+    ports:
+      - "8001:8001"
+    depends_on:
+      - postgres
+
+  user-service:
+    build: ./backend/user-service
+    ports:
+      - "8002:8002"
+    depends_on:
+      - mongodb
+
+  analytics-service:
+    build: ./backend/analytics-service
+    ports:
+      - "8003:8003"
+    depends_on:
+      - redis
+
+  admin-frontend:
+    build: ./frontend/admin-panel
+    ports:
+      - "4200:80"
+
+  public-frontend:
+    build: ./frontend/public-website
+    ports:
+      - "3000:3000"
+
+  nginx-gateway:
+    build: ./gateway
+    ports:
+      - "80:80"
+    depends_on:
+      - admin-frontend
+      - public-frontend
+      - product-service
+      - user-service
+      - analytics-service
+
+volumes:
+  postgres_data:
